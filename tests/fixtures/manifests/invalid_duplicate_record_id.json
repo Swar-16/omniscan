@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "dataset_id": "invalid-dup-record",
+  "name": "Invalid Duplicate Record Manifest",
+  "license": "MIT",
+  "records": [
+    {
+      "id": "DUP-001",
+      "image_path": "images/sheet_001.png"
+    },
+    {
+      "id": "DUP-001",
+      "image_path": "images/sheet_002.png"
+    }
+  ]
+}
+

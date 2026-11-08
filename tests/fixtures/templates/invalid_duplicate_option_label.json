@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "template_id": "invalid-dup-opt",
+  "name": "Invalid Duplicate Option Label",
+  "description": "Template where a question has duplicate option labels",
+  "page": {
+    "reference_width": 1000,
+    "reference_height": 1000,
+    "aspect_ratio": 1.0,
+    "orientation": "portrait"
+  },
+  "registration": {
+    "strategy": "fiducial_markers",
+    "markers": [
+      {
+        "id": "tl",
+        "center": { "x": 0.05, "y": 0.05 },
+        "size": { "width": 0.02, "height": 0.02 },
+        "shape": "square"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "section_id": "sec1",
+      "name": "Section 1",
+      "columns": 1,
+      "questions": [
+        {
+          "question_id": "Q1",
+          "question_number": 1,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.20, "y": 0.30 }, "radius": 0.01, "shape": "circle" },
+            { "label": "A", "center": { "x": 0.30, "y": 0.30 }, "radius": 0.01, "shape": "circle" }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
