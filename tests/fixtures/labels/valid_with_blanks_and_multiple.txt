@@ -1,0 +1,11 @@
+# Labels with blank, multiple, and ambiguous entries
+# candidate: CAND-7002
+1 A
+2 BLANK
+3 AB
+4 -
+5 AMBIGUOUS: faint erasure
+6 B,C
+7 ?
+8 D
+

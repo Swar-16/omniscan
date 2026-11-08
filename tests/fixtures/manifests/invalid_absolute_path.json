@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "dataset_id": "invalid-abs-path",
+  "name": "Invalid Absolute Path Manifest",
+  "license": "MIT",
+  "records": [
+    {
+      "id": "ABS-001",
+      "image_path": "/var/data/scans/sheet_001.png"
+    }
+  ]
+}
+

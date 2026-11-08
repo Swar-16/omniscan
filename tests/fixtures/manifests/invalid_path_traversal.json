@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "dataset_id": "invalid-traversal",
+  "name": "Invalid Path Traversal Manifest",
+  "license": "MIT",
+  "records": [
+    {
+      "id": "TRAV-001",
+      "image_path": "images/../../passwords.txt"
+    }
+  ]
+}
+

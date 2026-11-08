@@ -1,0 +1,4 @@
+# Malformed label line
+Q01,A
+Q02,123$
+Q03,C

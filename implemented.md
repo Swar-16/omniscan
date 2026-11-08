@@ -165,3 +165,150 @@ omniscan/
 - `cargo fmt --check`: **PASSED** (0 diffs, exit code 0).
 - `cargo clippy --all-targets --all-features -- -D warnings`: **PASSED** (0 warnings, exit code 0).
 - `cargo test`: **PASSED** (11 tests passed: 5 unit tests, 6 integration tests, 0 failures).
+
+
+---
+
+## [2026-11-08] — Milestone M1: Dataset Inventory and Template Configuration
+
+### 1. Milestone Objectives & Scope
+- **Charter:** Establish normalized geometric primitives, versioned JSON template representation with comprehensive boundary validation, dataset manifest schema, ground-truth label parser, synthetic reference template, and functional CLI template inspection.
+- **Constraints Honored:**
+  - Zero ML, PostgreSQL/database, GUI/web, or desktop dependencies.
+  - Zero OpenCV code introduced (pure Rust domain modeling).
+  - Preserved existing architecture and accepted ADRs 001–010.
+  - No large external datasets downloaded or committed.
+  - Clean library/binary separation preserved.
+
+---
+
+### 2. Dataset Research & Reconciliation
+- **Primary Dataset:** Tamaulipas Multiple-Choice-Question Exam Image Dataset (Version 2).
+- **Source:** Mendeley Data (`https://data.mendeley.com/datasets/djmynjwjpy/2`), DOI: `10.17632/djmynjwjpy.2`.
+- **License:** CC BY 4.0 (attribution required, commercial/academic use permitted).
+- **Sheet Count Reconciliation:**
+  - Mendeley v2 metadata records **5,721** published scanned sheets:
+    - Cohort 90: 3,669 sheets (90 items, 4 options A-D).
+    - Cohort 100: 2,052 sheets (100 items, 4 options A-D).
+  - MDPI paper (*Journal of Imaging*, 2025) mentions **6,029** total sheets collected across educational institutions. The discrepancy (308 sheets) represents examination papers withheld or filtered prior to Mendeley publication. OMNISCAN targets the 5,721 published sheets.
+- **Candidate ID Privacy:** Student names and identifiers are anonymized/masked on physical sheets. The public ground-truth labels do not provide candidate roll numbers. Candidate ID bubble decoding is therefore verified using synthetic templates.
+- **Staging Decision:** Real sheet coordinates are not invented. Template calibration for Tamaulipas Cohort 90 will occur in Milestone M2 after decoding real sample images.
+
+---
+
+### 3. Dependency Decisions
+Added only two pure-Rust dependencies to `Cargo.toml`:
+
+| Crate | Version | Justification |
+|---|---|---|
+| `serde` | `1.0` (features: `["derive"]`) | Compile-time declarative serialization/deserialization framework. |
+| `serde_json` | `1.0` | High-performance JSON parser for template and manifest files. |
+
+**Kept Existing:** `clap` (v4.5), `thiserror` (v2.0).  
+**Deferred to M2:** `opencv`.
+
+---
+
+### 4. Architecture & Module Design
+
+```text
+omniscan/
+├── configs/
+│   └── templates/
+│       └── synthetic-standard-30q-v1.json    # Calibrated 30-question synthetic template
+├── docs/
+│   └── datasets/
+│       └── tamaulipas-research.md             # Dataset research profile & reconciliation
+├── src/
+│   ├── core/
+│   │   └── mod.rs                            # Point2D, Size2D, NormalizedRect, Circle, Orientation
+│   ├── layout/
+│   │   └── mod.rs                            # Template, PageLayout, MarkerLayout, CandidateIdLayout, QuestionLayout
+│   ├── manifest/
+│   │   └── mod.rs                            # DatasetManifest, ManifestRecord, DatasetSplit, path validation
+│   ├── labels/
+│   │   └── mod.rs                            # GroundTruthSheet, QuestionLabel, ResponseMark parser
+│   ├── cli.rs                                # CLI arguments & subcommands
+│   ├── error.rs                              # Typed OmniscanError (Template, Manifest, GroundTruth variants)
+│   ├── lib.rs                                # Library exports (core, layout, manifest, labels, cli, error)
+│   └── main.rs                               # Binary entry point wiring inspect-template
+└── tests/
+    ├── fixtures/
+    │   ├── templates/                        # 8 synthetic template fixtures (valid & invalid)
+    │   ├── manifests/                        # 4 synthetic manifest fixtures (valid & invalid)
+    │   └── labels/                           # 4 synthetic ground-truth fixtures (valid & invalid)
+    ├── cli_smoke_tests.rs                    # Integration tests for binary execution & inspect-template
+    ├── template_validation_tests.rs          # Template boundary & uniqueness integration tests
+    └── manifest_and_labels_tests.rs          # Manifest security & ground-truth parser tests
+```
+
+#### Detailed Component Breakdown:
+1. **Geometric Core (`src/core/mod.rs`):**
+   - Coordinates normalized to $[0.0, 1.0]$ with top-left origin.
+   - `Circle::overlaps_with(&self, other: &Circle)` computes pairwise distance against the sum of radii ($r_1 + r_2$).
+   - `NormalizedRect::is_within_bounds()` enforces strict positive dimensions inside page bounds.
+2. **Template Representation & Validation (`src/layout/mod.rs`):**
+   - `schema_version == 1` enforcement.
+   - Page dimensions strictly positive; aspect ratio verified against declared reference width/height within 0.01 tolerance.
+   - Registration markers validated for positive size, unique IDs, and boundary containment.
+   - Candidate ID grid validated for exactly 6 columns, 10 rows (digits 0-9), non-overlapping spacing, and boundary bounds.
+   - Questions validated for uniqueness across sections, minimum 2 options per question, unique option labels within questions, positive radii, and pairwise bubble non-overlap.
+   - Formatted `TemplateSummary` display implementation.
+3. **Synthetic Reference Template (`configs/templates/synthetic-standard-30q-v1.json`):**
+   - All 30 questions explicitly defined (3 columns of 10 questions, 4 options A-D).
+   - 4 corner fiducial markers.
+   - 6-digit candidate ID bubble grid.
+   - Mathematically verified non-overlapping coordinates.
+4. **Dataset Manifest (`src/manifest/mod.rs`):**
+   - Unique record IDs enforced.
+   - Strict relative path enforcement: rejects absolute paths (starting with `/`, `\`, or `C:`) and path traversal (`..` components).
+   - Validates partition splits (`train`, `validation`, `test`, `holdout`).
+   - Separate method `validate_files_exist(base_dir)` for checking disk files.
+5. **Ground-Truth Label Parser (`src/labels/mod.rs`):**
+   - Supports single-mark (`Single(char)`), multiple-mark (`Multiple(Vec<char>)`), blank (`Blank`), and ambiguous (`Ambiguous(String)`).
+   - Handles comma, tab, and whitespace delimiters.
+   - Strips comments (`#`) and extracts candidate ID directives (`# candidate_id: <ID>`).
+   - Line-number preservation on all errors.
+   - Rejects duplicate question IDs, duplicate options within multiple marks, and malformed tokens (never silently treats unknown tokens as blank).
+6. **CLI Implementation (`src/main.rs`):**
+   - Functional `omniscan inspect-template <TEMPLATE.json>`.
+   - On valid template: prints human-readable summary to `stdout` and exits with code 0.
+   - On invalid/corrupt template: prints typed error to `stderr` and exits with code 1.
+
+---
+
+### 5. Validation Results & Quality Gates
+
+| Command | Status | Notes |
+|---|---|---|
+| `cargo fmt --check` | **PASSED** | 0 formatting diffs across all source files and tests. |
+| `cargo clippy --all-targets --all-features -- -D warnings` | **PASSED** | 0 warnings across library, binary, and test targets. |
+| `cargo test` | **PASSED** | **47/47 tests passed (0 failures):**<br>- 22 unit tests in `src/lib.rs`<br>- 8 integration tests in `cli_smoke_tests`<br>- 9 integration tests in `template_validation_tests`<br>- 8 integration tests in `manifest_and_labels_tests` |
+| `cargo run -- inspect-template configs/templates/synthetic-standard-30q-v1.json` | **PASSED** | Correctly outputs validated summary and returns exit code 0. |
+
+---
+
+### 6. Next Milestone
+- **Milestone M2 — Image Ingestion and Preprocessing:**
+  - Implement image decoding with error handling for unsupported/corrupt files.
+  - Establish project-owned image abstraction behind an imaging adapter boundary.
+  - Implement grayscale conversion and benchmark Otsu vs adaptive thresholding.
+  - Setup native OpenCV build environment per `docs/windows-setup.md`.
+
+
+---
+
+## [2026-11-09] — Milestone M1: Pre-Commit Formatting Normalization & Quality Gate Verification
+
+### 1. Action & Reconciliation
+- **Issue:** Minor trailing empty newline in `src/core/mod.rs` flagged during independent audit.
+- **Resolution:** Executed `cargo fmt` to canonicalize EOF and whitespace formatting across `src/core/mod.rs` and all new modules.
+- **Constraints Honored:**
+  - Preserved append-only integrity of `implemented.md`.
+  - Zero external dependencies introduced.
+  - No commits performed prior to explicit user authorization.
+
+### 2. Final Verification Results
+- `cargo fmt --check`: **PASSED** (0 diffs, exit code 0).
+- `cargo clippy --all-targets --all-features -- -D warnings`: **PASSED** (0 warnings, exit code 0).
+- `cargo test`: **PASSED** (47/47 tests passed across all units and integration suites).

@@ -1,0 +1,390 @@
+{
+  "schema_version": 1,
+  "template_id": "synthetic-standard-30q-v1",
+  "name": "Synthetic Standard 30-Question Template",
+  "description": "Calibrated synthetic reference template containing 3 columns of 10 questions, 4 options (A-D) per question, 4 registration fiducials, and a 6-digit candidate ID grid.",
+  "page": {
+    "reference_width": 2480,
+    "reference_height": 3508,
+    "aspect_ratio": 0.7070,
+    "orientation": "portrait"
+  },
+  "registration": {
+    "strategy": "fiducial_markers",
+    "markers": [
+      {
+        "id": "top_left",
+        "center": { "x": 0.05, "y": 0.05 },
+        "size": { "width": 0.025, "height": 0.025 },
+        "shape": "square"
+      },
+      {
+        "id": "top_right",
+        "center": { "x": 0.95, "y": 0.05 },
+        "size": { "width": 0.025, "height": 0.025 },
+        "shape": "square"
+      },
+      {
+        "id": "bottom_left",
+        "center": { "x": 0.05, "y": 0.95 },
+        "size": { "width": 0.025, "height": 0.025 },
+        "shape": "square"
+      },
+      {
+        "id": "bottom_right",
+        "center": { "x": 0.95, "y": 0.95 },
+        "size": { "width": 0.025, "height": 0.025 },
+        "shape": "square"
+      }
+    ]
+  },
+  "candidate_id": {
+    "id": "candidate_id",
+    "digit_columns": 6,
+    "digits_per_column": 10,
+    "origin": { "x": 0.58, "y": 0.12 },
+    "column_spacing": 0.045,
+    "row_spacing": 0.012,
+    "bubble_radius": 0.005
+  },
+  "sections": [
+    {
+      "section_id": "main_assessment",
+      "name": "Multiple Choice Assessment (30 Questions)",
+      "columns": 3,
+      "questions": [
+        {
+          "question_id": "Q01",
+          "question_number": 1,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.10, "y": 0.320 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.14, "y": 0.320 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.18, "y": 0.320 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.22, "y": 0.320 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q02",
+          "question_number": 2,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.10, "y": 0.374 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.14, "y": 0.374 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.18, "y": 0.374 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.22, "y": 0.374 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q03",
+          "question_number": 3,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.10, "y": 0.428 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.14, "y": 0.428 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.18, "y": 0.428 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.22, "y": 0.428 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q04",
+          "question_number": 4,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.10, "y": 0.482 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.14, "y": 0.482 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.18, "y": 0.482 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.22, "y": 0.482 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q05",
+          "question_number": 5,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.10, "y": 0.536 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.14, "y": 0.536 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.18, "y": 0.536 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.22, "y": 0.536 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q06",
+          "question_number": 6,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.10, "y": 0.590 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.14, "y": 0.590 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.18, "y": 0.590 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.22, "y": 0.590 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q07",
+          "question_number": 7,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.10, "y": 0.644 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.14, "y": 0.644 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.18, "y": 0.644 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.22, "y": 0.644 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q08",
+          "question_number": 8,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.10, "y": 0.698 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.14, "y": 0.698 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.18, "y": 0.698 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.22, "y": 0.698 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q09",
+          "question_number": 9,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.10, "y": 0.752 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.14, "y": 0.752 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.18, "y": 0.752 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.22, "y": 0.752 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q10",
+          "question_number": 10,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.10, "y": 0.806 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.14, "y": 0.806 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.18, "y": 0.806 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.22, "y": 0.806 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q11",
+          "question_number": 11,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.40, "y": 0.320 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.44, "y": 0.320 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.48, "y": 0.320 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.52, "y": 0.320 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q12",
+          "question_number": 12,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.40, "y": 0.374 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.44, "y": 0.374 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.48, "y": 0.374 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.52, "y": 0.374 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q13",
+          "question_number": 13,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.40, "y": 0.428 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.44, "y": 0.428 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.48, "y": 0.428 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.52, "y": 0.428 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q14",
+          "question_number": 14,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.40, "y": 0.482 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.44, "y": 0.482 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.48, "y": 0.482 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.52, "y": 0.482 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q15",
+          "question_number": 15,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.40, "y": 0.536 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.44, "y": 0.536 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.48, "y": 0.536 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.52, "y": 0.536 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q16",
+          "question_number": 16,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.40, "y": 0.590 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.44, "y": 0.590 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.48, "y": 0.590 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.52, "y": 0.590 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q17",
+          "question_number": 17,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.40, "y": 0.644 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.44, "y": 0.644 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.48, "y": 0.644 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.52, "y": 0.644 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q18",
+          "question_number": 18,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.40, "y": 0.698 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.44, "y": 0.698 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.48, "y": 0.698 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.52, "y": 0.698 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q19",
+          "question_number": 19,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.40, "y": 0.752 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.44, "y": 0.752 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.48, "y": 0.752 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.52, "y": 0.752 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q20",
+          "question_number": 20,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.40, "y": 0.806 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.44, "y": 0.806 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.48, "y": 0.806 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.52, "y": 0.806 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q21",
+          "question_number": 21,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.70, "y": 0.320 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.74, "y": 0.320 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.78, "y": 0.320 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.82, "y": 0.320 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q22",
+          "question_number": 22,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.70, "y": 0.374 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.74, "y": 0.374 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.78, "y": 0.374 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.82, "y": 0.374 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q23",
+          "question_number": 23,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.70, "y": 0.428 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.74, "y": 0.428 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.78, "y": 0.428 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.82, "y": 0.428 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q24",
+          "question_number": 24,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.70, "y": 0.482 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.74, "y": 0.482 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.78, "y": 0.482 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.82, "y": 0.482 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q25",
+          "question_number": 25,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.70, "y": 0.536 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.74, "y": 0.536 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.78, "y": 0.536 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.82, "y": 0.536 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q26",
+          "question_number": 26,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.70, "y": 0.590 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.74, "y": 0.590 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.78, "y": 0.590 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.82, "y": 0.590 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q27",
+          "question_number": 27,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.70, "y": 0.644 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.74, "y": 0.644 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.78, "y": 0.644 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.82, "y": 0.644 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q28",
+          "question_number": 28,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.70, "y": 0.698 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.74, "y": 0.698 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.78, "y": 0.698 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.82, "y": 0.698 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q29",
+          "question_number": 29,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.70, "y": 0.752 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.74, "y": 0.752 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.78, "y": 0.752 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.82, "y": 0.752 }, "radius": 0.008, "shape": "circle" }
+          ]
+        },
+        {
+          "question_id": "Q30",
+          "question_number": 30,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.70, "y": 0.806 }, "radius": 0.008, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.74, "y": 0.806 }, "radius": 0.008, "shape": "circle" },
+            { "label": "C", "center": { "x": 0.78, "y": 0.806 }, "radius": 0.008, "shape": "circle" },
+            { "label": "D", "center": { "x": 0.82, "y": 0.806 }, "radius": 0.008, "shape": "circle" }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

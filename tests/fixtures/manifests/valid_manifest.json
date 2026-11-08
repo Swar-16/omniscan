@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "dataset_id": "synthetic-smoke-v1",
+  "name": "Synthetic Smoke Dataset",
+  "version": "1.0",
+  "description": "Synthetic fixtures for manifest validation",
+  "source_url": "https://omniscan.local/datasets",
+  "license": "MIT",
+  "default_template_id": "synthetic-standard-30q-v1",
+  "records": [
+    {
+      "id": "SMK-001",
+      "image_path": "data/synthetic/images/sheet_001.png",
+      "ground_truth_path": "data/synthetic/labels/sheet_001.txt",
+      "template_id": "synthetic-standard-30q-v1",
+      "cohort": "synthetic-30q",
+      "split": "train",
+      "metadata": { "notes": "sample train record" }
+    },
+    {
+      "id": "SMK-002",
+      "image_path": "data/synthetic/images/sheet_002.png",
+      "ground_truth_path": "data/synthetic/labels/sheet_002.txt",
+      "template_id": "synthetic-standard-30q-v1",
+      "cohort": "synthetic-30q",
+      "split": "test",
+      "metadata": { "notes": "sample test record" }
+    }
+  ]
+}
+

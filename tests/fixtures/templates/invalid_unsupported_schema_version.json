@@ -1,0 +1,18 @@
+{
+  "schema_version": 99,
+  "template_id": "future-v99",
+  "name": "Unsupported Version Template",
+  "description": "Template using unsupported schema version",
+  "page": {
+    "reference_width": 1000,
+    "reference_height": 1000,
+    "aspect_ratio": 1.0,
+    "orientation": "portrait"
+  },
+  "registration": {
+    "strategy": "fiducial_markers",
+    "markers": []
+  },
+  "sections": []
+}
+

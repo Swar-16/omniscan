@@ -77,6 +77,40 @@ fn test_subcommand_process_help() {
 }
 
 #[test]
+fn test_subcommand_inspect_template_success() {
+    let binary = env!("CARGO_BIN_EXE_omniscan");
+    let output = Command::new(binary)
+        .args([
+            "inspect-template",
+            "configs/templates/synthetic-standard-30q-v1.json",
+        ])
+        .output()
+        .expect("Failed to execute inspect-template");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Template ID:       synthetic-standard-30q-v1"));
+    assert!(stdout.contains("Questions Total:   30 questions"));
+    assert!(stdout.contains("Status:            VALID"));
+}
+
+#[test]
+fn test_subcommand_inspect_template_failure() {
+    let binary = env!("CARGO_BIN_EXE_omniscan");
+    let output = Command::new(binary)
+        .args([
+            "inspect-template",
+            "tests/fixtures/templates/invalid_duplicate_question_id.json",
+        ])
+        .output()
+        .expect("Failed to execute inspect-template on invalid template");
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("Duplicate question ID: 'Q1'"));
+}
+
+#[test]
 fn test_invalid_argument_fails() {
     let binary = env!("CARGO_BIN_EXE_omniscan");
     let output = Command::new(binary)

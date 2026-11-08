@@ -11,6 +11,14 @@ A local-first, configurable Optical Mark Recognition (OMR) platform. The first d
   - Typed error hierarchy and discoverable CLI `--help`.
   - CI workflow configured for formatting, Clippy, and tests.
   - Windows environment and OpenCV build prerequisites documented in [`docs/windows-setup.md`](docs/windows-setup.md).
+- **M1 (Dataset Inventory and Template Configuration):** Implemented.
+  - Normalized 2D geometric domain types (`Point2D`, `Circle`, `NormalizedRect`).
+  - Versioned OMR JSON template representation and strict geometric validator.
+  - Calibrated synthetic 30-question reference template (`configs/templates/synthetic-standard-30q-v1.json`).
+  - Versioned dataset manifest schema with path-traversal protection.
+  - Multi-delimiter ground-truth label parser with line-number diagnostics.
+  - Functional `omniscan inspect-template` CLI command.
+  - Documented Tamaulipas dataset profile and reconciliation in [`docs/datasets/tamaulipas-research.md`](docs/datasets/tamaulipas-research.md).
 
 ## Read first
 
@@ -18,10 +26,11 @@ A local-first, configurable Optical Mark Recognition (OMR) platform. The first d
 2. [`implemented.md`](implemented.md) — agent implementation and operational ledger.
 3. [`docs/00-project-charter.md`](docs/00-project-charter.md) — product decisions and scope.
 4. [`docs/01-dataset-decision.md`](docs/01-dataset-decision.md) — dataset comparison and preflight.
-5. [`docs/02-implementation-plan.md`](docs/02-implementation-plan.md) — milestone plan and acceptance criteria.
-6. [`docs/06-ai-agent-execution-playbook.md`](docs/06-ai-agent-execution-playbook.md) — how to delegate tasks to an AI coding agent.
-7. [`docs/windows-setup.md`](docs/windows-setup.md) — Windows development setup and native OpenCV build prerequisites.
-8. [`docs/adr/README.md`](docs/adr/README.md) — architecture decisions.
+5. [`docs/datasets/tamaulipas-research.md`](docs/datasets/tamaulipas-research.md) — Tamaulipas dataset profile and reconciliation.
+6. [`docs/02-implementation-plan.md`](docs/02-implementation-plan.md) — milestone plan and acceptance criteria.
+7. [`docs/06-ai-agent-execution-playbook.md`](docs/06-ai-agent-execution-playbook.md) — how to delegate tasks to an AI coding agent.
+8. [`docs/windows-setup.md`](docs/windows-setup.md) — Windows development setup and native OpenCV build prerequisites.
+9. [`docs/adr/README.md`](docs/adr/README.md) — architecture decisions.
 
 ## Principles
 
@@ -63,13 +72,13 @@ cargo test
 # Display help and subcommands
 cargo run -- --help
 
-# Validate an image scan stub
+# Inspect and validate an OMR sheet template
+cargo run -- inspect-template configs/templates/synthetic-standard-30q-v1.json
+
+# Validate an image scan stub (M2)
 cargo run -- validate-image scan.png
 
-# Inspect a template definition stub
-cargo run -- inspect-template configs/templates/initial-template.json
-
-# Process a single scan
+# Process a single scan stub (M7)
 cargo run -- process scan.png --template template.json --answer-key key.json
 ```
 

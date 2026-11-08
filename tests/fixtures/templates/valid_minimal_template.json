@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "template_id": "valid-minimal-v1",
+  "name": "Minimal Valid Template",
+  "description": "Minimal template for testing",
+  "page": {
+    "reference_width": 1000,
+    "reference_height": 1414,
+    "aspect_ratio": 0.7072,
+    "orientation": "portrait"
+  },
+  "registration": {
+    "strategy": "fiducial_markers",
+    "markers": [
+      {
+        "id": "tl",
+        "center": { "x": 0.05, "y": 0.05 },
+        "size": { "width": 0.02, "height": 0.02 },
+        "shape": "square"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "section_id": "sec_min",
+      "name": "Minimal Section",
+      "columns": 1,
+      "questions": [
+        {
+          "question_id": "Q1",
+          "question_number": 1,
+          "question_type": "single_choice",
+          "options": [
+            { "label": "A", "center": { "x": 0.20, "y": 0.30 }, "radius": 0.01, "shape": "circle" },
+            { "label": "B", "center": { "x": 0.30, "y": 0.30 }, "radius": 0.01, "shape": "circle" }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
