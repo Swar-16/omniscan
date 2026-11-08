@@ -59,4 +59,3 @@ mod tests {
         assert!(matches!(omniscan_err, OmniscanError::Io(_)));
     }
 }
-

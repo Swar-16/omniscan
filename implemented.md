@@ -151,3 +151,17 @@ omniscan/
     4. Provide initial template configuration for the chosen sheet cohort.
     5. Add synthetic test fixtures for template validation (without downloading large datasets).
 
+
+
+---
+
+## [2026-11-08] — Milestone M0: Formatting Normalization (`cargo fmt`)
+
+### 1. Action & Motivation
+- **Issue:** `cargo fmt --check` reported trailing whitespace/newline diffs in `src/error.rs`, `src/lib.rs`, and `src/main.rs`.
+- **Resolution:** Executed `cargo fmt` to canonicalize file endings and remove trailing empty lines across all Rust source files.
+
+### 2. Validation
+- `cargo fmt --check`: **PASSED** (0 diffs, exit code 0).
+- `cargo clippy --all-targets --all-features -- -D warnings`: **PASSED** (0 warnings, exit code 0).
+- `cargo test`: **PASSED** (11 tests passed: 5 unit tests, 6 integration tests, 0 failures).
