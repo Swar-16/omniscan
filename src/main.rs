@@ -3,6 +3,7 @@
 use clap::Parser;
 use omniscan::cli::{Cli, Commands};
 use omniscan::error::Result;
+use omniscan::layout::Template;
 use std::process::ExitCode;
 
 fn run(cli: Cli) -> Result<()> {
@@ -16,11 +17,9 @@ fn run(cli: Cli) -> Result<()> {
             Ok(())
         }
         Commands::InspectTemplate { template } => {
-            eprintln!("[omniscan] Inspecting template: {}", template.display());
-            println!(
-                "Template inspection stub: '{}' is queued for M1 implementation",
-                template.display()
-            );
+            let t = Template::from_file(&template)?;
+            let summary = t.summary();
+            println!("{summary}");
             Ok(())
         }
         Commands::Process {

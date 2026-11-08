@@ -14,8 +14,14 @@ pub enum OmniscanError {
     #[error("Image processing error: {0}")]
     ImageProcessing(String),
 
-    #[error("Template error: {0}")]
+    #[error("Template validation error: {0}")]
     Template(String),
+
+    #[error("Manifest validation error: {0}")]
+    Manifest(String),
+
+    #[error("Ground truth parsing error: {0}")]
+    GroundTruth(String),
 
     #[error("Alignment failure: {0}")]
     Alignment(String),
@@ -28,6 +34,9 @@ pub enum OmniscanError {
 
     #[error("CLI argument error: {0}")]
     Cli(String),
+
+    #[error("JSON error: {0}")]
+    Json(#[from] serde_json::Error),
 }
 
 /// Specialized Result alias for OMNISCAN operations.
@@ -45,10 +54,22 @@ mod tests {
             "Configuration error: missing required field 'version'"
         );
 
-        let ambiguity = OmniscanError::Ambiguity("Question 4 has multiple marks".to_string());
+        let template_err = OmniscanError::Template("Question Q1 out of bounds".to_string());
         assert_eq!(
-            ambiguity.to_string(),
-            "Recognition ambiguity: Question 4 has multiple marks"
+            template_err.to_string(),
+            "Template validation error: Question Q1 out of bounds"
+        );
+
+        let manifest_err = OmniscanError::Manifest("Path traversal detected".to_string());
+        assert_eq!(
+            manifest_err.to_string(),
+            "Manifest validation error: Path traversal detected"
+        );
+
+        let gt_err = OmniscanError::GroundTruth("Line 5: duplicate question".to_string());
+        assert_eq!(
+            gt_err.to_string(),
+            "Ground truth parsing error: Line 5: duplicate question"
         );
     }
 
