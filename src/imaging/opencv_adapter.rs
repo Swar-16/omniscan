@@ -9,10 +9,18 @@
 //! - **TIFF**: Single-page 8-bit grayscale and 8-bit 3-channel RGB/BGR. Multi-page TIFFs are rejected.
 //!
 //! # Memory & Resource Bounds
-//! All dimensions and allocations are validated before allocating the destination project-owned buffer:
-//! - Dimensions must be `> 0` and `<= MAX_IMAGE_DIMENSION` (15,000 px).
-//! - Total decompressed buffer size must be `<= MAX_IMAGE_PIXEL_BYTES` (120 MiB).
-//! - All stride and allocation calculations use checked arithmetic to prevent overflow.
+//! - **Decompression & Memory Ordering:** Image ingestion occurs in two stages:
+//!   1. OpenCV's native `imread` decodes the input container into host memory.
+//!   2. The project inspects matrix dimensions and allocates a project-owned `ImageBuffer`.
+//! - **Limit Scope:** The project enforces `MAX_IMAGE_DIMENSION` (15,000 px) and `MAX_IMAGE_PIXEL_BYTES`
+//!   (120 MiB) on the decoded raster buffer. **This is not a hard process-wide memory limit.**
+//!   During decoding, peak process memory briefly includes OpenCV's internal decoding buffer in addition
+//!   to the destination buffer.
+//! - **Accepted MVP Limitation (Decompression Bombs):** Specially crafted, highly compressed images
+//!   (e.g., zip-bomb style PNGs with extreme dimensions) are decompressed by native OpenCV before
+//!   OMNISCAN's dimensional guards inspect `mat.rows()` and `mat.cols()`. True pre-decode protection
+//!   requires pre-parsing container headers (e.g., PNG IHDR) and is deferred to platform hardening.
+//! - **Checked Arithmetic:** All stride and allocation calculations use checked arithmetic to prevent overflow.
 
 use std::path::Path;
 
@@ -225,8 +233,19 @@ pub fn decode_image_with_order(
     }
 
     // 8. Copy and transform pixel data into tightly-packed project-owned buffer
-    let is_continuous = mat.is_continuous();
-    let contiguous_mat = if is_continuous { mat } else { mat.clone() };
+    let contiguous_mat = if mat.is_continuous() {
+        mat
+    } else {
+        let cloned = mat.clone();
+        if !cloned.is_continuous() {
+            return Err(ImageError::DecodeFailed {
+                path: path.display().to_string(),
+                message: "Decoded image matrix could not be converted to a continuous row layout"
+                    .to_string(),
+            });
+        }
+        cloned
+    };
 
     let raw_bytes = contiguous_mat
         .data_bytes()
@@ -370,12 +389,19 @@ fn save_raw_gray_png(path: &Path, width: u32, height: u32, data: &[u8]) -> Resul
         .map_err(|e| ImageError::PreprocessingFailed(format!("Failed to access Mat data: {e}")))?
         .copy_from_slice(data);
 
-    opencv::imgcodecs::imwrite(path_str, &mat, &Vector::new()).map_err(|e| {
+    let written = opencv::imgcodecs::imwrite(path_str, &mat, &Vector::new()).map_err(|e| {
         ImageError::IoError {
             path: path.display().to_string(),
             message: format!("OpenCV imwrite failed: {e}"),
         }
     })?;
+
+    if !written {
+        return Err(ImageError::IoError {
+            path: path.display().to_string(),
+            message: "OpenCV imwrite returned false (failed to write image to disk)".to_string(),
+        });
+    }
 
     Ok(())
 }

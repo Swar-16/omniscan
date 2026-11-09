@@ -54,11 +54,21 @@ pub struct PreprocessResult {
 
 /// Executes the preprocessing pipeline according to the provided configuration.
 ///
+/// # Output Artifacts & Overwrite Semantics
 /// Produces output PNG artifacts in `config.output_dir`:
-/// - `grayscale.png`
-/// - `otsu.png` (if `Otsu` or `Both`)
-/// - `adaptive.png` (if `Adaptive` or `Both`)
-/// - `diagnostics.json` (atomic write)
+/// - `grayscale.png`: Single-channel 8-bit grayscale image.
+/// - `otsu.png`: Binarized sheet via Otsu global thresholding (if `Otsu` or `Both`).
+/// - `adaptive.png`: Binarized sheet via adaptive Gaussian thresholding (if `Adaptive` or `Both`).
+/// - `diagnostics.json`: Atomic telemetry record adhering to `"omniscan-preprocessing-diagnostics-v1"`.
+///
+/// **Existing Destination Files:** If `config.output_dir` already contains artifacts from an
+/// earlier execution, those files are overwritten in-place. Protection is strictly enforced against
+/// overwriting the original input image file if it resides in the destination directory.
+///
+/// **Partial Write Failure:** Artifacts are written sequentially (`grayscale.png` -> `otsu.png` ->
+/// `adaptive.png` -> `diagnostics.json`). If an I/O failure occurs while writing a later artifact,
+/// previously written PNG files may remain on disk. However, `diagnostics.json` is only written upon
+/// complete pipeline success; an incomplete run is never recorded as successful.
 ///
 /// # Errors
 /// Returns an [`OmniscanError`] if decoding fails, parameters are invalid, or I/O fails.
@@ -193,7 +203,8 @@ pub fn execute_preprocess(config: &PreprocessConfig) -> Result<PreprocessResult>
     let artifact_write_micros = write_start.elapsed().as_micros() as u64;
 
     // 9. Run benchmark if requested
-    let benchmark_summary = if config.benchmark {
+    let (benchmark_summary, benchmark_micros) = if config.benchmark {
+        let bench_start = Instant::now();
         let iters = config.benchmark_iterations.max(1);
         let warmup = 2;
 
@@ -249,25 +260,28 @@ pub fn execute_preprocess(config: &PreprocessConfig) -> Result<PreprocessResult>
             0.0
         };
 
-        Some(BenchmarkSummary {
-            warmup_iterations: warmup,
-            measured_iterations: iters,
-            throughput_images_per_sec: throughput,
-            latency_micros: total_stats,
-            grayscale_latency_micros: compute_latency_stats(&gray_durations),
-            otsu_latency_micros: if otsu_durations.is_empty() {
-                None
-            } else {
-                compute_latency_stats(&otsu_durations)
-            },
-            adaptive_latency_micros: if adapt_durations.is_empty() {
-                None
-            } else {
-                compute_latency_stats(&adapt_durations)
-            },
-        })
+        (
+            Some(BenchmarkSummary {
+                warmup_iterations: warmup,
+                measured_iterations: iters,
+                throughput_images_per_sec: throughput,
+                latency_micros: total_stats,
+                grayscale_latency_micros: compute_latency_stats(&gray_durations),
+                otsu_latency_micros: if otsu_durations.is_empty() {
+                    None
+                } else {
+                    compute_latency_stats(&otsu_durations)
+                },
+                adaptive_latency_micros: if adapt_durations.is_empty() {
+                    None
+                } else {
+                    compute_latency_stats(&adapt_durations)
+                },
+            }),
+            Some(bench_start.elapsed().as_micros() as u64),
+        )
     } else {
-        None
+        (None, None)
     };
 
     let total_pipeline_micros = pipeline_start.elapsed().as_micros() as u64;
@@ -306,6 +320,7 @@ pub fn execute_preprocess(config: &PreprocessConfig) -> Result<PreprocessResult>
             otsu_micros,
             adaptive_micros,
             artifact_write_micros,
+            benchmark_micros,
             total_pipeline_micros,
         },
         success: true,

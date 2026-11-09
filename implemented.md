@@ -605,3 +605,48 @@ omniscan/
 ### 7. Milestone M2 Phase Status
 - **Current Status:** Phase 2D complete and verified.
 - **Milestone M2 Verdict:** **READY FOR M2 FINAL REVIEW**.
+
+
+---
+
+## [2026-11-09] — Milestone M2: Engineering Audit Remediation & Final Quality Gate Validation
+
+### 1. Timing Telemetry Reconciliation (Finding 1)
+- Added `benchmark_micros: Option<u64>` to [`TimingBreakdown`](file:///C:/C/Sem-7/Digital_Image_Processing/omniscan/src/imaging/diagnostics.rs).
+- Clarified timing semantics:
+  - `total_pipeline_micros` measures end-to-end wall-clock duration of `execute_preprocess`.
+  - When `--benchmark` is enabled, the benchmark phase (2 warm-up + $N$ measured runs) is explicitly recorded in `benchmark_micros`.
+  - In `BenchmarkSummary`, steady-state latency statistics (`latency_micros`) explicitly exclude warm-up runs.
+  - Distinguishes first-run cold-start timing (which may include one-time library/thread-pool startup overhead) from steady-state benchmark iterations.
+
+### 2. Pre-Decode Memory Guard Documentation (Finding 2)
+- Explicitly documented decoding and allocation order in [`src/imaging/opencv_adapter.rs`](file:///C:/C/Sem-7/Digital_Image_Processing/omniscan/src/imaging/opencv_adapter.rs):
+  - Ingestion occurs in two stages: OpenCV native `imread` decompresses into memory, followed by project-owned dimensional and allocation bounding.
+  - Clarified that `MAX_IMAGE_PIXEL_BYTES` (120 MiB) bounds the project-owned `ImageBuffer` and is not a hard process-wide ceiling.
+  - Documented decompression bomb risks on highly compressed inputs as an accepted academic MVP limitation.
+
+### 3. Partial Artifact Write Failure Handling (Finding 3)
+- Fixed silent write failure bug in `save_raw_gray_png`: verified that OpenCV `imwrite` returns `true`; if it returns `false`, an explicit `ImageError::IoError` is returned instead of silently discarding failure.
+- Guaranteed that `diagnostics.json` is written atomically only upon full pipeline success, preventing partial runs from being recorded as successful.
+- Documented that unrolled sequential writes may leave earlier PNG artifacts on disk if a subsequent write fails.
+
+### 4. Destination Directory Overwrite Semantics (Finding 4)
+- Formally documented in CLI and pipeline doc comments that re-running `preprocess` into an existing output directory overwrites artifact files in-place.
+- Preserved strict protection against overwriting original source input files.
+
+### 5. Defensive Non-Contiguous Mat Handling (Finding 5)
+- Added explicit continuity verification after `mat.clone()` in `decode_image_with_order`. If a decoded matrix cannot be converted into a continuous row layout, an explicit `ImageError::DecodeFailed` error is returned.
+
+### 6. CI Download Integrity Checksum (Finding 6)
+- Pinned and verified authoritative SHA-256 checksum in `.github/workflows/ci.yml`:
+  `bff38466091c313dac21a0b73eea8278316a89c1d434c6f0b10697e087670168`
+- Added PowerShell `Get-FileHash` verification step that halts CI with an explicit error message on mismatch.
+- Updated CI test step to run `cargo test --all-targets`.
+
+### 7. Final Quality Gate Status
+- `cargo fmt --check`: **PASSED** (0 formatting diffs).
+- `cargo clippy --offline --all-targets -- -D warnings`: **PASSED** (0 compiler warnings).
+- `cargo test --offline --all-targets`: **PASSED** (**120/120 tests passing**, 0 failures, 0 ignored).
+- `cargo build --release --offline`: **PASSED**.
+- `cargo tree -p opencv`: **PASSED** (only minimal `imgcodecs` and `imgproc` features).
+- **Remediation Verdict:** **READY FOR COMMIT WITH ACCEPTED LIMITATIONS**.

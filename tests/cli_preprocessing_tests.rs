@@ -177,6 +177,12 @@ fn test_cli_preprocess_both_methods() {
     assert_eq!(decoded_adapt.width(), 50);
     assert_eq!(decoded_adapt.height(), 50);
     assert!(decoded_adapt.as_slice().iter().all(|&b| b == 0 || b == 255));
+
+    // Verify timing fields are non-negative and benchmark_micros is absent when not benchmarked
+    assert!(diag.timing_micros.decode_micros > 0);
+    assert!(diag.timing_micros.grayscale_micros > 0);
+    assert!(diag.timing_micros.total_pipeline_micros > 0);
+    assert!(diag.timing_micros.benchmark_micros.is_none());
 }
 
 #[test]
@@ -268,6 +274,13 @@ fn test_cli_preprocess_benchmark_mode() {
     assert_eq!(bench.measured_iterations, 5);
     assert!(bench.throughput_images_per_sec > 0.0);
     assert!(bench.latency_micros.min_micros > 0.0);
+
+    // Verify benchmark_micros is explicitly captured in TimingBreakdown
+    assert!(diag.timing_micros.benchmark_micros.is_some());
+    assert!(diag.timing_micros.benchmark_micros.unwrap() > 0);
+    assert!(
+        diag.timing_micros.total_pipeline_micros >= diag.timing_micros.benchmark_micros.unwrap()
+    );
 }
 
 #[test]
@@ -321,4 +334,96 @@ fn test_cli_preprocess_input_unchanged_and_collision_protection() {
     // Verify input file was not modified
     let after_content = fs::read(&img_path).unwrap();
     assert_eq!(initial_content, after_content);
+}
+
+#[test]
+fn test_cli_preprocess_partial_artifact_write_failure_behavior() {
+    let ws = TempWorkspace::new("partial_fail");
+    let img_path = ws.create_synthetic_png("sheet.png", 30, 30);
+    let out_dir = ws.file_path("out_partial");
+    fs::create_dir_all(&out_dir).unwrap();
+
+    // Create a directory where otsu.png would be written, causing save_binary_image to fail
+    let conflicting_otsu_dir = out_dir.join("otsu.png");
+    fs::create_dir(&conflicting_otsu_dir).unwrap();
+
+    let binary = env!("CARGO_BIN_EXE_omniscan");
+    let output = Command::new(binary)
+        .args([
+            "preprocess",
+            img_path.to_str().unwrap(),
+            "--output",
+            out_dir.to_str().unwrap(),
+            "--method",
+            "both",
+        ])
+        .output()
+        .expect("Failed to execute preprocess partial failure check");
+
+    // Command must report failure to CLI
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("Error: Image processing error:"));
+
+    // grayscale.png was written before otsu.png, so it remains on disk
+    assert!(out_dir.join("grayscale.png").exists());
+
+    // Crucial guarantee: diagnostics.json must NEVER be emitted on failure
+    assert!(
+        !out_dir.join("diagnostics.json").exists(),
+        "diagnostics.json must not exist when pipeline fails"
+    );
+}
+
+#[test]
+fn test_cli_preprocess_overwrites_existing_artifacts_in_output_dir() {
+    let ws = TempWorkspace::new("overwrite_ok");
+    let img_path = ws.create_synthetic_png("exam.png", 32, 32);
+    let out_dir = ws.file_path("out_overwrite");
+
+    let binary = env!("CARGO_BIN_EXE_omniscan");
+
+    // Run 1: initial creation
+    let output1 = Command::new(binary)
+        .args([
+            "preprocess",
+            img_path.to_str().unwrap(),
+            "--output",
+            out_dir.to_str().unwrap(),
+            "--method",
+            "otsu",
+        ])
+        .output()
+        .expect("Failed to execute initial preprocess");
+    assert!(output1.status.success());
+    assert!(out_dir.join("grayscale.png").exists());
+
+    // Corrupt grayscale.png with dummy marker bytes
+    let dummy_marker = b"STALE_OLD_ARTIFACT_DATA";
+    fs::write(out_dir.join("grayscale.png"), dummy_marker).unwrap();
+    assert_eq!(
+        fs::read(out_dir.join("grayscale.png")).unwrap(),
+        dummy_marker
+    );
+
+    // Run 2: rerun into same directory must overwrite in-place
+    let output2 = Command::new(binary)
+        .args([
+            "preprocess",
+            img_path.to_str().unwrap(),
+            "--output",
+            out_dir.to_str().unwrap(),
+            "--method",
+            "otsu",
+        ])
+        .output()
+        .expect("Failed to execute second preprocess");
+    assert!(output2.status.success());
+
+    // Verify grayscale.png was cleanly overwritten with valid decodable image data
+    let overwritten_data = fs::read(out_dir.join("grayscale.png")).unwrap();
+    assert_ne!(overwritten_data, dummy_marker);
+    let decoded = decode_image(&out_dir.join("grayscale.png")).expect("Must decode successfully");
+    assert_eq!(decoded.width(), 32);
+    assert_eq!(decoded.height(), 32);
 }

@@ -102,6 +102,19 @@ impl PreprocessingDiagnostics {
 }
 
 /// Execution durations for individual pipeline stages, recorded in microseconds.
+///
+/// Semantics:
+/// - `decode_micros`: Native container file reading and decoding.
+/// - `grayscale_micros`: First-run color-to-grayscale conversion. Note: on the first execution
+///   within a process, this measurement may include one-time library subsystem and thread-pool
+///   startup overhead. Steady-state performance is captured separately in [`BenchmarkSummary`].
+/// - `otsu_micros`: First-run Otsu thresholding, if selected.
+/// - `adaptive_micros`: First-run adaptive Gaussian thresholding, if selected.
+/// - `artifact_write_micros`: Writing PNG artifacts (`grayscale.png`, `otsu.png`, `adaptive.png`) to disk.
+/// - `benchmark_micros`: Total elapsed duration of the benchmark phase (warm-up plus measured iterations),
+///   if benchmark mode was requested.
+/// - `total_pipeline_micros`: Total wall-clock duration of the pipeline from initial input validation
+///   to completion.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TimingBreakdown {
     /// Duration of native image decoding from disk.
@@ -116,28 +129,35 @@ pub struct TimingBreakdown {
     pub adaptive_micros: Option<u64>,
     /// Duration of PNG artifact encoding and writing to disk.
     pub artifact_write_micros: u64,
+    /// Duration of benchmark execution (warmup + measured iterations), if benchmark mode was enabled.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub benchmark_micros: Option<u64>,
     /// Total wall-clock duration of the pipeline execution.
     pub total_pipeline_micros: u64,
 }
 
 /// Statistical summary across measured benchmark iterations.
+///
+/// Warm-up iterations are executed prior to measurement to ensure the CPU cache and
+/// algorithm pipelines are primed. Warm-up durations are excluded from all latency statistics
+/// ([`LatencyStats`]) and throughput metrics.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BenchmarkSummary {
-    /// Number of discarded warm-up runs.
+    /// Number of discarded warm-up runs (not included in latency statistics).
     pub warmup_iterations: usize,
     /// Number of recorded measured runs.
     pub measured_iterations: usize,
     /// Estimated preprocessing throughput in images processed per second.
     pub throughput_images_per_sec: f64,
-    /// Total preprocessing latency statistics (excluding decode and disk artifact I/O).
+    /// Steady-state preprocessing latency statistics (excluding decode, disk I/O, and warm-up).
     pub latency_micros: LatencyStats,
-    /// Grayscale conversion latency statistics.
+    /// Grayscale conversion latency statistics across measured iterations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub grayscale_latency_micros: Option<LatencyStats>,
-    /// Otsu thresholding latency statistics.
+    /// Otsu thresholding latency statistics across measured iterations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub otsu_latency_micros: Option<LatencyStats>,
-    /// Adaptive Gaussian thresholding latency statistics.
+    /// Adaptive Gaussian thresholding latency statistics across measured iterations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub adaptive_latency_micros: Option<LatencyStats>,
 }
@@ -234,6 +254,7 @@ mod tests {
                 otsu_micros: Some(300),
                 adaptive_micros: Some(1200),
                 artifact_write_micros: 4000,
+                benchmark_micros: None,
                 total_pipeline_micros: 10700,
             },
             success: true,
@@ -241,7 +262,59 @@ mod tests {
         };
 
         let serialized = serde_json::to_string(&diag).unwrap();
+        // benchmark_micros: None should be omitted from JSON
+        assert!(!serialized.contains("benchmark_micros"));
         let deserialized: PreprocessingDiagnostics = serde_json::from_str(&serialized).unwrap();
         assert_eq!(diag, deserialized);
+    }
+
+    #[test]
+    fn test_diagnostics_with_benchmark_timing_roundtrip() {
+        let diag = PreprocessingDiagnostics {
+            schema_version: PREPROCESSING_DIAGNOSTICS_SCHEMA_VERSION.to_string(),
+            input_path: "sheet.png".to_string(),
+            file_size_bytes: 45000,
+            width: 500,
+            height: 600,
+            pixel_format: "Gray8".to_string(),
+            channels: 1,
+            stride_bytes: 500,
+            decoded_buffer_bytes: 300000,
+            method: "otsu".to_string(),
+            otsu_threshold: Some(120.0),
+            adaptive_block_size: None,
+            adaptive_c: None,
+            output_artifacts: HashMap::new(),
+            timing_micros: TimingBreakdown {
+                decode_micros: 1000,
+                grayscale_micros: 50,
+                otsu_micros: Some(100),
+                adaptive_micros: None,
+                artifact_write_micros: 800,
+                benchmark_micros: Some(25000),
+                total_pipeline_micros: 26950,
+            },
+            success: true,
+            benchmark: Some(BenchmarkSummary {
+                warmup_iterations: 2,
+                measured_iterations: 10,
+                throughput_images_per_sec: 400.0,
+                latency_micros: LatencyStats {
+                    min_micros: 2000.0,
+                    median_micros: 2400.0,
+                    mean_micros: 2500.0,
+                    max_micros: 3100.0,
+                },
+                grayscale_latency_micros: None,
+                otsu_latency_micros: None,
+                adaptive_latency_micros: None,
+            }),
+        };
+
+        let serialized = serde_json::to_string(&diag).unwrap();
+        assert!(serialized.contains("benchmark_micros"));
+        let deserialized: PreprocessingDiagnostics = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(diag, deserialized);
+        assert_eq!(deserialized.timing_micros.benchmark_micros, Some(25000));
     }
 }

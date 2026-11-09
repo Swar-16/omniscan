@@ -73,6 +73,12 @@ fn test_integration_corrupt_files() {
     fs::write(&jpg.path, b"corrupted random data not a valid jpg").unwrap();
     let err_jpg = decode_image(&jpg.path).unwrap_err();
     assert!(matches!(err_jpg, ImageError::DecodeFailed { .. }));
+
+    // Empty 0-byte image file must return DecodeFailed
+    let empty_png = TempImage::new("png");
+    fs::write(&empty_png.path, b"").unwrap();
+    let err_empty = decode_image(&empty_png.path).unwrap_err();
+    assert!(matches!(err_empty, ImageError::DecodeFailed { .. }));
 }
 
 #[test]

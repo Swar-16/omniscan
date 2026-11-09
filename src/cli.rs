@@ -44,7 +44,7 @@ pub enum Commands {
         /// Path to the input image file
         image: PathBuf,
 
-        /// Directory for diagnostic image and JSON output
+        /// Directory for diagnostic image and JSON output (existing artifact files will be overwritten in-place)
         #[arg(short, long)]
         output: PathBuf,
 

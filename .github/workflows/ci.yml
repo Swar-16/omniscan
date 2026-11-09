@@ -27,7 +27,18 @@ jobs:
         run: |
           $url = "https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe"
           $out = "$env:RUNNER_TEMP\opencv-4.10.0.exe"
+          $expectedHash = "bff38466091c313dac21a0b73eea8278316a89c1d434c6f0b10697e087670168"
+          
+          Write-Host "Downloading OpenCV 4.10.0 Windows SDK..."
           Invoke-WebRequest -Uri $url -OutFile $out
+          
+          $actualHash = (Get-FileHash -Path $out -Algorithm SHA256).Hash.ToLower()
+          if ($actualHash -ne $expectedHash) {
+              Write-Error "OpenCV SDK SHA-256 verification FAILED!`nExpected: $expectedHash`nActual:   $actualHash"
+              exit 1
+          }
+          Write-Host "OpenCV SDK SHA-256 verification passed: $actualHash"
+          
           tar -xf $out -C "C:\"
           Remove-Item $out -Force
       - name: Configure OpenCV Environment
@@ -41,6 +52,6 @@ jobs:
       - name: Check formatting
         run: cargo fmt --check
       - name: Run Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
       - name: Run tests
-        run: cargo test
+        run: cargo test --all-targets
