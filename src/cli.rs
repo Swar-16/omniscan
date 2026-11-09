@@ -1,7 +1,21 @@
 //! Command-line interface definitions and parser for OMNISCAN.
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+
+/// Preprocessing binarization method choice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PreprocessMethod {
+    /// Global Otsu binarization
+    Otsu,
+    /// Spatially varying adaptive Gaussian binarization
+    Adaptive,
+    /// Both Otsu and adaptive Gaussian thresholding
+    #[default]
+    Both,
+}
 
 /// OMNISCAN: A local-first, configurable Optical Mark Recognition (OMR) platform.
 #[derive(Debug, Parser)]
@@ -17,12 +31,42 @@ pub struct Cli {
     pub command: Commands,
 }
 
-#[derive(Debug, Subcommand, PartialEq, Eq)]
+#[derive(Debug, Subcommand, PartialEq)]
 pub enum Commands {
     /// Validate an input image file for format, dimensions, and readability
     ValidateImage {
         /// Path to the scan/image file to validate
         image: PathBuf,
+    },
+
+    /// Preprocess an image: convert to grayscale, apply thresholding, and export diagnostics
+    Preprocess {
+        /// Path to the input image file
+        image: PathBuf,
+
+        /// Directory for diagnostic image and JSON output
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Preprocessing thresholding method to apply (otsu, adaptive, both)
+        #[arg(short, long, value_enum, default_value_t = PreprocessMethod::Both)]
+        method: PreprocessMethod,
+
+        /// Neighborhood block size for adaptive Gaussian thresholding (must be odd and > 1)
+        #[arg(long, default_value_t = 21)]
+        block_size: i32,
+
+        /// Constant subtracted from the Gaussian-weighted mean in adaptive thresholding
+        #[arg(long, default_value_t = 10.0)]
+        c: f64,
+
+        /// Run in benchmark mode over multiple iterations
+        #[arg(long, default_value_t = false)]
+        benchmark: bool,
+
+        /// Number of measured benchmark iterations
+        #[arg(long, default_value_t = 10)]
+        benchmark_iterations: usize,
     },
 
     /// Inspect a sheet template definition and verify geometry bounds
@@ -141,6 +185,57 @@ mod tests {
                 template: PathBuf::from("sheet.json"),
                 answer_key: Some(PathBuf::from("key.json")),
                 output: Some(PathBuf::from("out_dir")),
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_preprocess_command_defaults() {
+        let args = ["omniscan", "preprocess", "sheet.png", "--output", "out_dir"];
+        let cli = Cli::try_parse_from(args).expect("Failed to parse preprocess command");
+        assert_eq!(
+            cli.command,
+            Commands::Preprocess {
+                image: PathBuf::from("sheet.png"),
+                output: PathBuf::from("out_dir"),
+                method: PreprocessMethod::Both,
+                block_size: 21,
+                c: 10.0,
+                benchmark: false,
+                benchmark_iterations: 10,
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_preprocess_command_custom() {
+        let args = [
+            "omniscan",
+            "preprocess",
+            "scan.jpg",
+            "--output",
+            "artifacts",
+            "--method",
+            "adaptive",
+            "--block-size",
+            "31",
+            "--c",
+            "15.5",
+            "--benchmark",
+            "--benchmark-iterations",
+            "25",
+        ];
+        let cli = Cli::try_parse_from(args).expect("Failed to parse custom preprocess command");
+        assert_eq!(
+            cli.command,
+            Commands::Preprocess {
+                image: PathBuf::from("scan.jpg"),
+                output: PathBuf::from("artifacts"),
+                method: PreprocessMethod::Adaptive,
+                block_size: 31,
+                c: 15.5,
+                benchmark: true,
+                benchmark_iterations: 25,
             }
         );
     }

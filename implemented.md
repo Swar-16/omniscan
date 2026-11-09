@@ -312,3 +312,296 @@ omniscan/
 - `cargo fmt --check`: **PASSED** (0 diffs, exit code 0).
 - `cargo clippy --all-targets --all-features -- -D warnings`: **PASSED** (0 warnings, exit code 0).
 - `cargo test`: **PASSED** (47/47 tests passed across all units and integration suites).
+
+
+---
+
+## [2026-11-09] — Milestone M2 Phase 2A: OpenCV Dependency Integration & Project-Owned Image Abstractions
+
+### 1. Phase A Standalone Spike & Environment Verification
+- **Verified Environment:**
+  - Official OpenCV Windows SDK `4.10.0` extracted to `C:\opencv`.
+  - Rust crate `opencv = "0.102.0"` with generator `0.108.0` (resolves AST generation panics encountered with OpenCV 4.10 and LLVM 23 on older 0.93 bindings).
+  - Native library link target: `opencv_world4100.lib` / `opencv_world4100.dll`.
+  - Feature selection: `default-features = false`, `features = ["imgcodecs", "imgproc"]` (avoids unused `dnn`, `gapi`, `videoio`, `highgui`).
+- **Spike Execution in `scratch/opencv_spike`:**
+  - Verified binding generation, static library linking, PNG decoding, grayscale conversion, Otsu binarization, and runtime dynamic loading under Windows 11.
+
+### 2. Dependency Integration (`Cargo.toml`)
+- Added `opencv = { version = "0.102", default-features = false, features = ["imgcodecs", "imgproc"] }` to `omniscan/Cargo.toml`.
+- Generated and locked clean dependencies in `omniscan/Cargo.lock`.
+
+### 3. Project-Owned Image Abstractions (`src/imaging/`)
+- **`PixelFormat` Enum:**
+  - Supported formats: `Gray8` (1 channel), `Rgb8` (3 channels), `Bgr8` (3 channels).
+  - Provided `channels(&self) -> usize` helper.
+- **`ImageBuffer` Struct:**
+  - Fully encapsulated layout with private fields: `width: u32`, `height: u32`, `format: PixelFormat`, `stride: usize`, `data: Vec<u8>`.
+  - Hardened constructors with checked arithmetic:
+    - Rejects zero dimensions and dimensions exceeding `MAX_IMAGE_DIMENSION = 15_000` pixels.
+    - Rejects allocations exceeding `MAX_IMAGE_PIXEL_BYTES = 120 * 1024 * 1024` (120 MB decompressed pixel cap).
+    - Enforces row stride invariant (`stride >= width * channels`).
+    - Enforces exact buffer capacity matching `stride * height`.
+  - Safe accessors: `width()`, `height()`, `format()`, `stride()`, `channels()`, `as_slice()`, `into_vec()`, `get_pixel(x, y)`.
+  - Zero `unsafe` blocks.
+- **`GrayImage` Struct:**
+  - Dedicated grayscale wrapper around `ImageBuffer` enforcing `format == PixelFormat::Gray8`.
+- **`BinaryImage` Struct:**
+  - Dedicated binarized wrapper around `ImageBuffer`.
+  - Enforces canonical OMNISCAN binarization invariant at construction:
+    - Foreground = `0` (dark pencil/pen mark).
+    - Background = `255` (unmarked sheet).
+    - Any intermediate or unexpected pixel byte is rejected with `ImageError::InvalidBinaryPixel { value, offset }`.
+  - Semantic boolean queries: `is_foreground(x, y) -> Option<bool>` and `is_background(x, y) -> Option<bool>`.
+- **Zero OpenCV Leakage Boundary:**
+  - OpenCV `Mat` and FFI primitives are strictly isolated. No OpenCV types appear in `ImageBuffer`, domain modules, or public APIs.
+  - Re-exported cleanly in `src/lib.rs`: `ImageBuffer`, `GrayImage`, `BinaryImage`, `PixelFormat`.
+
+### 4. Typed Error Handling (`src/error.rs`)
+- Introduced dedicated `ImageError` enum:
+  - `InvalidDimensions { width, height, max }`
+  - `DimensionOverflow { width, height, channels }`
+  - `AllocationTooLarge { bytes, max }`
+  - `BufferLengthMismatch { expected, actual }`
+  - `InvalidStride { width, channels, actual_stride, min_stride }`
+  - `InvalidBinaryPixel { value, offset }`
+- Integrated as `OmniscanError::Image(ImageError)` with `From<ImageError>` implementation.
+
+### 5. CI Automation (`.github/workflows/ci.yml`)
+- Configured Windows CI with `actions/cache@v4` caching `C:\opencv`.
+- Fallback automated PowerShell download and extraction of official OpenCV 4.10.0 release.
+- Added environment setup step setting `OPENCV_INCLUDE_PATHS`, `OPENCV_LINK_PATHS`, `OPENCV_LINK_LIBS`, `LIBCLANG_PATH`, and updating `PATH`.
+
+### 6. Validation Results & Quality Gates
+- `cargo fmt --check`: **PASSED** (0 formatting diffs).
+- `cargo clippy --offline --all-targets --all-features -- -D warnings`: **PASSED** (0 warnings).
+- `cargo test --offline --all-targets`: **PASSED** (62/62 tests passing, 0 failures):
+  - 37 unit tests in `src/lib.rs` (including 15 new imaging tests and 2 error tests).
+  - 8 integration tests in `cli_smoke_tests`.
+  - 8 integration tests in `manifest_and_labels_tests`.
+  - 9 integration tests in `template_validation_tests`.
+
+### 7. Milestone M2 Phase Status
+- **Current Status:** Phase 2A complete and verified.
+- **Next Phase:** Phase 2B (Native OpenCV Image Decoding Adapter & Verification Pipeline).
+
+
+---
+
+## [2026-11-09] — Milestone M2 Phase 2B: Native OpenCV Image Decoding Adapter & Verification Pipeline
+
+### 1. Adapter Architecture (`src/imaging/opencv_adapter.rs`)
+- **Strict Isolation Boundary:**
+  - OpenCV `Mat`, FFI primitives, and raw OpenCV errors are encapsulated entirely within `src/imaging/opencv_adapter.rs`.
+  - Callers receive project-owned abstractions: [`ImageBuffer`](file:///C:/C/Sem-7/Digital_Image_Processing/omniscan/src/imaging/buffer.rs#L34-L177) and [`GrayImage`](file:///C:/C/Sem-7/Digital_Image_Processing/omniscan/src/imaging/buffer.rs#L182-L260).
+  - Concrete public API without speculative traits:
+    - `decode_image(path: &Path) -> Result<ImageBuffer, ImageError>`
+    - `decode_image_with_order(path: &Path, color_order: ColorOrder) -> Result<ImageBuffer, ImageError>`
+    - `decode_gray_image(path: &Path) -> Result<GrayImage, ImageError>`
+    - `is_supported_format(path: &Path) -> bool`
+    - `ColorOrder` enum (`Rgb`, `Bgr`).
+
+### 2. Supported Formats & Verified Behavior
+- **PNG:** 8-bit single-channel grayscale (`CV_8UC1`), 8-bit 3-channel BGR/RGB (`CV_8UC3`), and 8-bit 4-channel BGRA (`CV_8UC4`).
+- **JPEG:** 8-bit grayscale (`CV_8UC1`) and 8-bit 3-channel color (`CV_8UC3`).
+- **TIFF:** Single-page 8-bit grayscale and 8-bit color. Multi-page TIFFs are detected and rejected.
+
+### 3. Pixel Format Decisions & Channel Ordering
+- **Canonical RGB Order:**
+  - By default, color images are decoded to standard `PixelFormat::Rgb8`. Pixel copying performs an in-flight byte swap from OpenCV's native BGR layout (`[B, G, R]` -> `[R, G, B]`) without allocating intermediate OpenCV `Mat` structures.
+- **Native BGR Order:**
+  - When callers explicitly select `ColorOrder::Bgr`, the native layout is preserved as `PixelFormat::Bgr8`.
+- **Grayscale Handling:**
+  - Grayscale images decode to `PixelFormat::Gray8`.
+  - `decode_gray_image` enforces the `Gray8` format; attempting to call it on color images returns a typed `ImageError::ExpectedGrayscale { path, channels }` error (since grayscale conversion algorithms belong to Phase 2C).
+
+### 4. Edge Cases, Invariants & Error Handling
+- **Alpha Compositing Against White:**
+  - 4-channel BGRA images are normalized by compositing each pixel against a pure white background `(255, 255, 255)` using integer arithmetic:
+    `C_out = ((C_src * A + 255 * (255 - A) + 127) / 255) as u8`.
+  - Transparency is never silently discarded.
+- **16-Bit Depth Rejection:**
+  - `mat.depth() != CV_8U` (e.g. `CV_16U = 2`) is rejected with `ImageError::UnsupportedDepth { depth }`.
+- **Unsupported Formats:**
+  - Extensions outside `.png`, `.jpg`, `.jpeg`, `.tif`, `.tiff` (e.g. `.bmp`, `.gif`, `.webp`, `.pdf`) are rejected with `ImageError::UnsupportedFormat { path, format }`.
+- **Multi-Page TIFF Rejection:**
+  - TIFF files are decoded using `imreadmulti`. If `pages.len() > 1`, decoding immediately aborts with `ImageError::MultiPageNotSupported { path, pages }`.
+- **Missing & Corrupted Files:**
+  - Missing paths return `ImageError::FileNotFound { path }`.
+  - Corrupted, empty, or unparseable binary streams return `ImageError::DecodeFailed { path, message }`.
+- **EXIF Orientation:**
+  - OpenCV's `IMREAD_UNCHANGED` preserves raw pixel raster order directly from the storage container and avoids applying automatic EXIF orientation transforms. This prevents lossy or unverified rotation/resampling prior to subsequent sheet alignment and homography stages.
+
+### 5. Memory Safety & Resource Safeguards
+- **Pre-Allocation Validation:**
+  - Dimensions are verified strictly before destination memory allocation: `0 < width <= MAX_IMAGE_DIMENSION (15,000)` and `0 < height <= MAX_IMAGE_DIMENSION (15,000)`.
+  - Checked multiplication validates row stride (`width * channels`) and total pixel capacity (`stride * height`) against integer overflow.
+  - Total required allocation is verified to not exceed `MAX_IMAGE_PIXEL_BYTES (120 MiB)` before calling `Vec::with_capacity`.
+- **Process Memory Distinction:**
+  - The 120 MiB cap bounds the single project-owned `ImageBuffer`. Peak process memory during decoding briefly includes OpenCV's internal decoded buffer in addition to the project-owned copy.
+
+### 6. Validation Results & Quality Gates
+- `cargo fmt --check`: **PASSED** (0 formatting diffs).
+- `cargo clippy --offline --all-targets -- -D warnings`: **PASSED** (0 warnings across all targets without `--all-features`).
+- `cargo test --offline --all-targets`: **PASSED** (**83/83 tests passing**, 0 failed, 0 ignored):
+  - **48** unit tests in `src/lib.rs` (37 prior + 11 new adapter unit tests).
+  - **10** integration tests in `tests/image_decoding_tests.rs`.
+  - **8** integration tests in `tests/cli_smoke_tests.rs`.
+  - **8** integration tests in `tests/manifest_and_labels_tests.rs`.
+  - **9** integration tests in `tests/template_validation_tests.rs`.
+- `cargo tree -e features -p opencv`: **PASSED** (only minimal features `imgcodecs` and `imgproc` enabled).
+
+### 7. Milestone M2 Phase Status
+- **Current Status:** Phase 2B complete and verified.
+- **Next Phase:** Phase 2C (Grayscale Conversion, Classical Binarization Benchmarks & Preprocessing Pipeline).
+
+
+---
+
+## [2026-11-09] — Milestone M2 Phase 2C: Grayscale Conversion & Classical Thresholding Engine
+
+### 1. Preprocessing Engine Architecture (`src/imaging/preprocessing.rs`)
+- **Encapsulated Preprocessing Boundary:**
+  - OpenCV `Mat` allocations and `imgproc` algorithms (`cvt_color`, `threshold`, `adaptive_threshold`) remain strictly internal to `src/imaging/preprocessing.rs`.
+  - Inputs and outputs strictly utilize project-owned abstractions: [`ImageBuffer`](file:///C:/C/Sem-7/Digital_Image_Processing/omniscan/src/imaging/buffer.rs#L34-L177), [`GrayImage`](file:///C:/C/Sem-7/Digital_Image_Processing/omniscan/src/imaging/buffer.rs#L182-L260), and [`BinaryImage`](file:///C:/C/Sem-7/Digital_Image_Processing/omniscan/src/imaging/buffer.rs#L265-L348).
+  - Concrete public API without speculative traits:
+    - `to_grayscale(buffer: &ImageBuffer) -> Result<GrayImage, ImageError>`
+    - `otsu_threshold(gray: &GrayImage) -> Result<BinaryImage, ImageError>`
+    - `otsu_threshold_with_level(gray: &GrayImage) -> Result<(BinaryImage, f64), ImageError>`
+    - `adaptive_gaussian_threshold(gray: &GrayImage, params: &AdaptiveGaussianParams) -> Result<BinaryImage, ImageError>`
+    - `adaptive_gaussian_threshold_default(gray: &GrayImage) -> Result<BinaryImage, ImageError>`
+    - `AdaptiveGaussianParams` struct with validated constructor `new(block_size, c)`.
+
+### 2. Grayscale Conversion Details
+- **Luminance Formula (ITU-R BT.601):**
+  $$Y = 0.299 \times R + 0.587 \times G + 0.114 \times B$$
+  Implemented using OpenCV integer fixed-point arithmetic with half-up rounding:
+  $$Y = \left\lfloor\frac{299 \times R + 587 \times G + 114 \times B + 500}{1000}\right\rfloor$$
+- **Channel Ordering Support:**
+  - `PixelFormat::Rgb8`: Processed via `COLOR_RGB2GRAY`. Verified on primary colors: Red (255, 0, 0) -> 76, Green (0, 255, 0) -> 150, Blue (0, 0, 255) -> 29, White (255, 255, 255) -> 255, Black (0, 0, 0) -> 0, Mid-gray (128, 128, 128) -> 128.
+  - `PixelFormat::Bgr8`: Processed via `COLOR_BGR2GRAY`. Verified on BGR ordering: Blue (255, 0, 0) -> 29, Red (0, 0, 255) -> 76.
+  - `PixelFormat::Gray8`: Passthrough without redundant mathematical operations or allocation overhead.
+- Preserves input dimensions (`width`, `height`).
+
+### 3. Otsu Global Thresholding Details
+- **Implementation & Binary Polarity:**
+  - Applied via `threshold(..., THRESH_BINARY | THRESH_OTSU)`.
+  - Polarized in strict adherence to the OMNISCAN domain contract:
+    - Pixels $\le T^*$ are mapped to **0** (dark ink / filled pencil mark foreground).
+    - Pixels $> T^*$ are mapped to **255** (unmarked white sheet paper background).
+- **Threshold Telemetry:**
+  - `otsu_threshold_with_level` exposes the computed threshold $T^*$ as `f64` for explanation and validation.
+- **Degenerate Histogram Behavior:**
+  - Uniform all-white (255): Computed threshold is 0.0; all pixels become 255 (background).
+  - Uniform all-black (0): Computed threshold is 0.0; all pixels become 0 (foreground).
+  - Uniform gray (128): Computed threshold is 0.0; all pixels become 255 (background).
+  - All outputs verified through `BinaryImage::new` ensuring no invalid intermediate values.
+
+### 4. Adaptive Gaussian Thresholding Details
+- **Local Neighborhood Thresholding:**
+  - Applied via `adaptive_threshold(..., ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, block_size, C)`.
+  - Evaluates local Gaussian-weighted average minus $C$:
+    $$T(x, y) = \text{GaussianMean}(x, y, block\_size) - C$$
+    - Pixels $\le T(x, y)$ mapped to **0** (foreground).
+    - Pixels $> T(x, y)$ mapped to **255** (background).
+- **Parameter Validation & Safeguards:**
+  - `block_size`: Validated to be odd, $> 1$, and $\le \min(width, height)$.
+  - `c`: Validated to be non-NaN and finite.
+  - Invalid parameters return typed `ImageError::InvalidAdaptiveParams { message }` rather than silently clamping.
+  - If image dimensions are smaller than `block_size`, an explicit `ImageError::InvalidAdaptiveParams` error is returned.
+  - Default parameters: `block_size = 21, c = 10.0`.
+
+### 5. Memory Safety & Resource Safeguards
+- Slices from project-owned buffers are transferred directly into local OpenCV `Mat` wrappers and copied into new project-owned `Vec<u8>` buffers.
+- Pre-allocation checks on width, height, stride, and maximum allocation cap (`MAX_IMAGE_PIXEL_BYTES = 120 MiB`) remain enforced.
+- Zero `unsafe` blocks.
+
+### 6. Validation Results & Quality Gates
+- `cargo fmt --check`: **PASSED** (0 formatting diffs).
+- `cargo clippy --offline --all-targets -- -D warnings`: **PASSED** (0 warnings across all targets).
+- `cargo test --offline --all-targets`: **PASSED** (**101/101 tests passing**, 0 failed, 0 ignored):
+  - **59** unit tests in `src/lib.rs` (48 prior + 11 new preprocessing unit tests).
+  - **7** integration tests in `tests/preprocessing_tests.rs`.
+  - **10** integration tests in `tests/image_decoding_tests.rs`.
+  - **8** integration tests in `tests/cli_smoke_tests.rs`.
+  - **8** integration tests in `tests/manifest_and_labels_tests.rs`.
+  - **9** integration tests in `tests/template_validation_tests.rs`.
+- `cargo tree -p opencv`: **PASSED** (only minimal features `imgcodecs` and `imgproc` enabled).
+
+### 7. Milestone M2 Phase Status
+- **Current Status:** Phase 2C complete and verified.
+- **Next Phase:** Phase 2D (CLI Ingestion/Validation Integration, Diagnostic Threshold Evaluation, and Benchmark Pipeline).
+
+
+---
+
+## [2026-11-09] — Milestone M2 Phase 2D: CLI Integration, Diagnostic Artifacts & Preprocessing Benchmarks
+
+### 1. Stride Handling Resolution (`src/imaging/preprocessing.rs`)
+- **Row-Padded Buffer Invariance:**
+  - Resolved potential coordinate drift and memory contamination in `to_grayscale`.
+  - When an incoming `ImageBuffer` exhibits a padded row stride (`stride > width * channels`), pixel data is unpadded row-by-row into a continuous pixel slice before transferring to OpenCV's native layout.
+  - Guarantees that all downstream `GrayImage` and `BinaryImage` representations maintain packed row layouts (`stride == width`), eliminating padding byte artifacts across binarization, serialization, and future alignment stages.
+
+### 2. CLI `validate-image` Subcommand (`src/main.rs`)
+- **Command Syntax:** `omniscan validate-image <IMAGE_PATH>`
+- **Telemetry & Validation Output:**
+  - Container file size (bytes & KB) vs. fully decoded memory footprint (`width * height * channels`).
+  - Spatial dimensions (`width` x `height`), pixel format (`Rgb8`, `Bgr8`, `Gray8`), channel count, and row stride.
+  - Explicit limit validation: `MAX_IMAGE_DIMENSION` (15,000 px) and `MAX_IMAGE_PIXEL_BYTES` (120 MiB).
+- **Error Handling:**
+  - Non-existent files return typed `ImageError::FileNotFound`.
+  - Unsupported file extensions (.bmp, .gif, .pdf, etc.) return `ImageError::UnsupportedFormat`.
+  - Corrupt, truncated, or unreadable streams return `ImageError::DecodeFailed`.
+
+### 3. CLI `preprocess` Subcommand & Pipeline (`src/imaging/pipeline.rs`, `src/cli.rs`)
+- **Command Syntax:** `omniscan preprocess <IMAGE_PATH> --output <DIR> [--method otsu|adaptive|both] [--block-size <ODD_INT>] [--c <FLOAT>] [--benchmark] [--benchmark-iterations <INT>]`
+- **Supported Methods:**
+  - `otsu`: Computes global Otsu threshold $T^*$ and emits `grayscale.png`, `otsu.png`, and `diagnostics.json`.
+  - `adaptive`: Applies local adaptive Gaussian thresholding with validated `block_size` and constant `C`, emitting `grayscale.png`, `adaptive.png`, and `diagnostics.json`.
+  - `both` (default): Executes and emits both binarization artifacts alongside `grayscale.png` and `diagnostics.json`.
+- **Parameter Validation & Safety:**
+  - Rejects even or non-positive `block_size` values before CV processing.
+  - Validates `c` against NaN and infinite values.
+  - Guard against input overwrites: canonicalizes paths and returns `OmniscanError::ValidationFailed` if an output artifact would overwrite the source input image.
+
+### 4. Output Artifacts & Serialization Boundary (`src/imaging/opencv_adapter.rs`)
+- **Encapsulated Image Serialization:**
+  - Added `save_gray_image(path, &GrayImage)` and `save_binary_image(path, &BinaryImage)` within the imaging adapter boundary.
+  - Uses native OpenCV `imwrite` with `CV_8UC1` under the hood while completely preventing OpenCV `Mat` types from leaking into CLI or pipeline callers.
+- **Diagnostic JSON Schema (`diagnostics.json`):**
+  - Adheres to schema `"omniscan-preprocessing-diagnostics-v1"`.
+  - Records input image metadata (container size, width, height, format, channels, stride, decoded size).
+  - Preprocessing configuration (method, calculated Otsu threshold $T^*$, adaptive block size & constant C).
+  - Explicit dictionary of generated output artifact paths.
+  - High-precision microsecond timing breakdown (`decode_micros`, `grayscale_micros`, `otsu_micros`, `adaptive_micros`, `artifact_write_micros`, `total_pipeline_micros`).
+  - Optional `benchmark` telemetry object when benchmark mode is requested.
+  - **Atomic Writing:** Diagnostics are written to a temporary sibling file (`.diagnostics.json.tmp.<pid>`) and atomically renamed into place to prevent partial reads or corrupt states during process interruption.
+
+### 5. Preprocessing Benchmark Engine (`src/imaging/diagnostics.rs`)
+- **Measurement Methodology:**
+  - Isolates pure algorithmic computer vision execution (grayscale conversion and thresholding) from image decoding and disk I/O.
+  - Performs 2 warm-up iterations to prime CPU caches, OpenCV lookup tables, and OS threadpools before timing.
+  - Runs $N$ measured iterations (default: 10, configurable via `--benchmark-iterations`).
+  - Computes throughput in images/second ($N / \text{total\_duration\_seconds}$).
+  - Computes comprehensive latency statistics (minimum, median, mean, maximum in microseconds) for total preprocessing time as well as individual breakdown stages (`grayscale_latency_micros`, `otsu_latency_micros`, `adaptive_latency_micros`).
+- **Statistical Invariants:**
+  - Pure statistical calculation handles even and odd sample sizes, verifying that $min \le median \le max$.
+
+### 6. Validation Results & Quality Gates
+- `cargo fmt --check`: **PASSED** (0 formatting diffs).
+- `cargo clippy --offline --all-targets -- -D warnings`: **PASSED** (0 warnings across all targets without `--all-features`).
+- `cargo test --offline --all-targets`: **PASSED** (**117/117 tests passing**, 0 failed, 0 ignored):
+  - **65** unit tests in `src/lib.rs` (59 prior + 4 diagnostics/benchmarking + 2 CLI parsing).
+  - **10** integration tests in `tests/cli_preprocessing_tests.rs`.
+  - **10** integration tests in `tests/image_decoding_tests.rs`.
+  - **8** integration tests in `tests/cli_smoke_tests.rs`.
+  - **8** integration tests in `tests/manifest_and_labels_tests.rs`.
+  - **7** integration tests in `tests/preprocessing_tests.rs`.
+  - **9** integration tests in `tests/template_validation_tests.rs`.
+- `cargo tree -p opencv`: **PASSED** (only minimal features `imgcodecs` and `imgproc` enabled).
+- Release binary compiled and verified on Windows 11 development environment.
+
+### 7. Milestone M2 Phase Status
+- **Current Status:** Phase 2D complete and verified.
+- **Milestone M2 Verdict:** **READY FOR M2 FINAL REVIEW**.

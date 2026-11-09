@@ -14,6 +14,7 @@ fn test_cli_help() {
         stdout.contains("OMNISCAN provides deterministic, explainable Optical Mark Recognition")
     );
     assert!(stdout.contains("validate-image"));
+    assert!(stdout.contains("preprocess"));
     assert!(stdout.contains("inspect-template"));
     assert!(stdout.contains("process"));
     assert!(stdout.contains("batch"));
