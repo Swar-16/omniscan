@@ -15,6 +15,29 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - name: Cache OpenCV SDK
+        id: cache-opencv
+        uses: actions/cache@v4
+        with:
+          path: C:\opencv
+          key: opencv-4.10.0-windows-x64
+      - name: Download & Extract OpenCV SDK
+        if: steps.cache-opencv.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          $url = "https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe"
+          $out = "$env:RUNNER_TEMP\opencv-4.10.0.exe"
+          Invoke-WebRequest -Uri $url -OutFile $out
+          tar -xf $out -C "C:\"
+          Remove-Item $out -Force
+      - name: Configure OpenCV Environment
+        shell: powershell
+        run: |
+          "OPENCV_INCLUDE_PATHS=C:\opencv\build\include" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "OPENCV_LINK_PATHS=C:\opencv\build\x64\vc16\lib" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "OPENCV_LINK_LIBS=opencv_world4100" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "C:\opencv\build\x64\vc16\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
       - name: Check formatting
         run: cargo fmt --check
       - name: Run Clippy
